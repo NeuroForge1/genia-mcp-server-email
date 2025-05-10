@@ -1,0 +1,3 @@
+nohup: ignoring input
+INFO:__main__:Iniciando servidor MCP de Email en http://0.0.0.0:8004
+ERROR:    Error loading ASGI app. Could not import module "main".

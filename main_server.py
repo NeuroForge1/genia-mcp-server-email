@@ -41,6 +41,8 @@ class SendEmailParams(BaseModel):
     from_address: Optional[EmailStr] = None
     from_name: Optional[str] = None
     smtp_config_override: Optional[SMTPConfig] = None
+    # MODIFICACIÓN: Añadir campo para headers personalizados
+    headers: Optional[Dict[str, str]] = None
 
 class EmailRequest(BaseModel):
     role: str = Field(default="user", description="Rol del solicitante, para compatibilidad conceptual con MCP.")
@@ -113,6 +115,12 @@ def _send_email_logic(params: SendEmailParams):
     msg["To"] = ", ".join(recipient_emails)
     msg["Subject"] = params.subject
 
+    # MODIFICACIÓN: Añadir headers personalizados si existen
+    if params.headers:
+        logger.info(f"Añadiendo headers personalizados: {params.headers}")
+        for header_name, header_value in params.headers.items():
+            msg[header_name] = header_value
+
     if params.body_text:
         msg.attach(MIMEText(params.body_text, "plain"))
     if params.body_html:
@@ -174,4 +182,3 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 8004))
     logger.info(f"Iniciando servidor MCP de Email en http://0.0.0.0:{port}")
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=bool(os.getenv("UVICORN_RELOAD", False)))
-

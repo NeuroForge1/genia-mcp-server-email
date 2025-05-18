@@ -71,10 +71,15 @@ app = FastAPI(
 def _send_email_logic(params: SendEmailParams):
     logger.info(f"Iniciando lógica de envío de correo para: {params.to_recipients}")
 
+    # HARDCODEO ABSOLUTO: Forzar el remitente brevosend.com que sabemos funciona correctamente
+    # Ignorar cualquier valor de variable de entorno o parámetro de entrada
+    actual_from_address = "mendezchristhian1@9055258.brevosend.com"
+    actual_from_name = "GENIA WhatsApp"
+    
+    logger.info(f"FORZANDO remitente a: {actual_from_name} <{actual_from_address}>")
+
     if params.smtp_config_override:
         smtp_cfg = params.smtp_config_override
-        actual_from_address = params.from_address or smtp_cfg.username
-        actual_from_name = params.from_name
         logger.info("Utilizando configuración SMTP proporcionada en la solicitud (override).")
     else:
         logger.info("Utilizando configuración SMTP por defecto del servidor (GENIA - Brevo).")
@@ -86,9 +91,6 @@ def _send_email_logic(params: SendEmailParams):
             use_tls=os.getenv("SMTP_USE_TLS_DEFAULT", "true").lower() == "true",
             use_ssl=os.getenv("SMTP_USE_SSL_DEFAULT", "false").lower() == "true"
         )
-        # Usar el remitente que sabemos que funciona correctamente
-        actual_from_address = params.from_address or os.getenv("DEFAULT_FROM_EMAIL", "mendezchristhian1@9055258.brevosend.com")
-        actual_from_name = params.from_name or os.getenv("DEFAULT_FROM_NAME", "GENIA WhatsApp")
 
     if not smtp_cfg.host:
         logger.error("Host SMTP no configurado.")
@@ -96,9 +98,6 @@ def _send_email_logic(params: SendEmailParams):
     if not smtp_cfg.username or not smtp_cfg.password:
         logger.error("Credenciales SMTP (usuario/contraseña) no configuradas o incompletas.")
         raise ValueError("Credenciales SMTP (usuario/contraseña) no configuradas.")
-    if not actual_from_address:
-        logger.error("Dirección de remitente no determinada.")
-        raise ValueError("No se pudo determinar la dirección del remitente.")
     if not params.to_recipients:
         logger.error("No se especificaron destinatarios.")
         raise ValueError("No se especificaron destinatarios.")
@@ -107,10 +106,8 @@ def _send_email_logic(params: SendEmailParams):
         raise ValueError("Se debe proporcionar body_text o body_html.")
 
     msg = MIMEMultipart("alternative")
-    if actual_from_name:
-        msg["From"] = f"{actual_from_name} <{actual_from_address}>"
-    else:
-        msg["From"] = actual_from_address
+    # HARDCODEO ABSOLUTO: Forzar el formato del remitente
+    msg["From"] = f"{actual_from_name} <{actual_from_address}>"
     
     recipient_emails = [r.email for r in params.to_recipients]
     msg["To"] = ", ".join(recipient_emails)
@@ -121,16 +118,16 @@ def _send_email_logic(params: SendEmailParams):
         logger.info(f"Añadiendo headers personalizados: {params.headers}")
         for header_name, header_value in params.headers.items():
             msg[header_name] = header_value
-    else:
-        # Añadir headers predeterminados para mejorar entregabilidad
-        default_headers = {
-            "X-Priority": "1",
-            "X-MSMail-Priority": "High",
-            "Importance": "High"
-        }
-        logger.info(f"Añadiendo headers personalizados: {default_headers}")
-        for header_name, header_value in default_headers.items():
-            msg[header_name] = header_value
+    
+    # SIEMPRE añadir headers predeterminados para mejorar entregabilidad
+    default_headers = {
+        "X-Priority": "1",
+        "X-MSMail-Priority": "High",
+        "Importance": "High"
+    }
+    logger.info(f"Añadiendo headers de prioridad: {default_headers}")
+    for header_name, header_value in default_headers.items():
+        msg[header_name] = header_value
 
     if params.body_text:
         msg.attach(MIMEText(params.body_text, "plain"))
@@ -158,6 +155,7 @@ def _send_email_logic(params: SendEmailParams):
         server.login(smtp_cfg.username, smtp_cfg.password)
         
         logger.info("Enviando correo...")
+        # HARDCODEO ABSOLUTO: Forzar el remitente en sendmail también
         server.sendmail(actual_from_address, recipient_emails, msg.as_string())
         server.quit()
         logger.info("Correo enviado exitosamente y conexión cerrada.")

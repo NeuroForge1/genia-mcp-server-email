@@ -86,8 +86,9 @@ def _send_email_logic(params: SendEmailParams):
             use_tls=os.getenv("SMTP_USE_TLS_DEFAULT", "true").lower() == "true",
             use_ssl=os.getenv("SMTP_USE_SSL_DEFAULT", "false").lower() == "true"
         )
-        actual_from_address = params.from_address or os.getenv("DEFAULT_FROM_EMAIL")
-        actual_from_name = params.from_name or os.getenv("DEFAULT_FROM_NAME")
+        # Usar el remitente que sabemos que funciona correctamente
+        actual_from_address = params.from_address or os.getenv("DEFAULT_FROM_EMAIL", "mendezchristhian1@9055258.brevosend.com")
+        actual_from_name = params.from_name or os.getenv("DEFAULT_FROM_NAME", "GENIA WhatsApp")
 
     if not smtp_cfg.host:
         logger.error("Host SMTP no configurado.")
@@ -119,6 +120,16 @@ def _send_email_logic(params: SendEmailParams):
     if params.headers:
         logger.info(f"Añadiendo headers personalizados: {params.headers}")
         for header_name, header_value in params.headers.items():
+            msg[header_name] = header_value
+    else:
+        # Añadir headers predeterminados para mejorar entregabilidad
+        default_headers = {
+            "X-Priority": "1",
+            "X-MSMail-Priority": "High",
+            "Importance": "High"
+        }
+        logger.info(f"Añadiendo headers personalizados: {default_headers}")
+        for header_name, header_value in default_headers.items():
             msg[header_name] = header_value
 
     if params.body_text:
